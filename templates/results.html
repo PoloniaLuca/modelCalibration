@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        {% include 'head.html' %}
+        <link rel="stylesheet" href="../static/visualizations.css">
+        <link rel="stylesheet" href="../static/tabs.css">
+        <title>Results | {{ constants.sitetitle }}</title>
+    </head>
+    <body>
+        <div class="container">
+        {% include 'header.html' %}
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="text-left informative">
+                        How to read these results:
+                        <ul>
+                            <li>
+                                <b>ECE</b> and the <b>Brier loss</b> range in <code>[0,1]</code>: lower scores
+                                indicate better
+                                calibration.
+                            </li>
+                            <li>
+                                <b>ECI<sub>global</sub></b> and <b>ECI<sub>l</sub></b> range in <code>[0,1]</code>:
+                                higher scores indicate better calibration.
+                            </li>
+                            <li>
+                                <b>ECI<sub>balance</sub></b> ranges between <code>-1</code>, indicating complete
+                                underconfidence, and <code>+1</code>, indicating complete overconfidence.
+                            </li>
+                            <li>
+                                The displayed plots are reliability diagrams. The upper subplot presents bars indicating the observed frequency of outcomes, termed as Relative Frequency (RF),
+                                corresponding to predicted probabilities in distinct bins. The lower subplot illustrates the calibration curve, depicting the correlation between predicted probabilities and the estimated probabilities of an occurrence.
+                                A perfectly calibrated model would line up with the diagonal.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 mb-5">
+                    <div class="tab">
+                        <button class="tablinks"
+                                onclick="openDiagram(event, 'Tables')"
+                                {% if navigating==false %}id="defaultOpen"{% endif %}>
+                            Global model
+                            scores
+                        </button>
+                        <button class="tablinks"
+                                onclick="openDiagram(event, 'Plots')"
+                                {% if navigating==true %}id="defaultOpen"{% endif %}>Local scores and plots</button>
+                    </div>
+                    <div id="Tables" class="tabcontent p-5">{{ global_scores_html|safe }}</div>
+                    <div id="Plots" class="tabcontent px-5">
+                        <br />
+                        {% include 'pagination.html' %}
+                        <p class="text-right font-weight-light mb-1 text-secondary sort_notice">sorted by class frequency, descending</p>
+                        {% for class_no in range(0, classes_no) %}
+                            <h3 class="mb-3">
+                                Class
+                                {{ classes_subset[class_no] }}
+                            </h3>
+                            {{ local_scores_htmls[class_no]|safe }}
+                            {{ local_ecis_htmls[class_no]|safe }}
+                            <div class="row justify-content-center">
+                                <div class="column text-center">
+                                    <div class="text-center">
+                                        <img id="zoom-img{{ class_no }}"
+                                             src="{{ url_for('static', filename=plot_filenames[class_no]) }}"
+                                             class="mx-auto  shadow p-3 mb-5 bg-white rounded border border-secondary"
+                                             alt="Class {{ class_no }}">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row justify-content-center mb-5">
+                                <div class="column text-center">
+                                    <a href="{{ url_for('static', filename=plot_filenames[class_no]) }}"
+                                       download="Reliability Diagram Class {{ class_no }}"
+                                       class="btn btn-primary">
+                                        <i class="fa fa-download"></i>
+                                    Download</a>
+                                </div>
+                            </div>
+                            <br />
+                            <br />
+                        {% endfor %}
+                        {% include 'pagination.html' %}
+                    </div>
+                    {% include 'footer.html' %}
+                </div>
+            </div>
+        </div>
+        <script>function openDiagram(evt, diagramName) {
+            var i,
+                tabcontent,
+                tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(diagramName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+
+
+        $(document).ready(function () {
+
+            $(function () {
+                $('[data-toggle="popover"]').popover()
+            });    // Get the element with id="defaultOpen" and click on it
+
+            // Tabs init
+            document.getElementById("defaultOpen").click();
+
+            // Modals init
+            var modal = document.getElementById("myModal");
+            var img = document.getElementById("zoom-img");
+            var modalImg = document.getElementById("img01");
+            var captionText = document.getElementById("caption");
+            img.onclick = function () {
+                modal.style.display = "block";
+                modalImg.src = this.src;
+                captionText.innerHTML = this.alt;
+            }
+            var span = document.getElementsByClassName("close")[0];
+            span.onclick = function () {
+                modal.style.display = "none";
+            }
+        });
+
+
+        </script>
+        {% include 'metatool.html' %}
+    </body>
+</html>

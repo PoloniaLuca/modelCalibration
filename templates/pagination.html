@@ -1,0 +1,41 @@
+<nav aria-label="Navigation">
+    <ul class="pagination justify-content-center mb-3">
+
+
+        {% if prev_start is not none %}
+        <li class="page-item">
+
+            <form method="POST" action="/#">
+
+                {% for key, value in hidden_fields.items() %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <input type="hidden" name="start" value="{{ prev_start }}">
+
+                <button class="page-link" type="submit" name="submit" value="navigate">Previous page</button>
+
+            </form>
+
+        </li>
+
+        {% endif %}
+        <li class="page-item"><span class="page-link disabled text-muted">{{ current_page }} / {{ total_pages }}</span></li>
+
+
+        {% if next_start is not none %}
+        <li class="page-item">
+
+            <form method="POST" action="/#">
+
+                {% for key, value in hidden_fields.items() %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+                {% endfor %}
+                <input type="hidden" name="start" value="{{ next_start }}">
+                <button class="page-link" type="submit" name="submit" value="navigate">Next page</button>
+            </form>
+
+        </li>
+        {% endif %}
+
+    </ul>
+</nav>

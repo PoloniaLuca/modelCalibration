@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% include 'head.html' %}
+    <title>{{ constants.sitetitle }}</title>
+    <meta name="description"
+          content="Online tool to assess the calibration of a machine learning model">
+    <link href="{{ url_for('static', filename='visualizations.css') }}"
+          rel="stylesheet">
+    <meta name="google-site-verification"
+          content="g8U-UktB1WiIS4HLtzCpQrHMnqOTRZFQ3G3HWnBWRj8" />
+  </head>
+  <style>
+    #calibrationBtn {
+      transition: all 0.3s ease;
+      --progress-width: 0%;
+      background-image: linear-gradient(
+        to right,
+        rgba(255,255,255,0.3) var(--progress-width),
+        transparent var(--progress-width)
+      );
+    }
+    #progressBar {
+      transition: width 0.3s linear;
+    }
+    .z-index-2 {
+      z-index: 2;
+    }
+  </style>
+  <body>
+    <div class="container">
+      {% include 'header.html' %}
+      <h3 class="mb-4">Input Data: <strong>Personalized Data</strong></h3>
+      <h5>Already have your files ready? 
+        <button class="btn btn-link p-0 border-0" onclick="document.getElementById('upload').scrollIntoView({behavior: 'smooth'});">Jump to upload &darr;</button>
+      </h5>
+      <p>
+          To generate calibration diagrams (e.g., reliability plots) and metrics (e.g., ECI), the tool requires:
+      </p>
+      <h4><strong>Mandatory Input Files *</strong></h4>
+      <p>
+          Upload <code>.txt</code> files based on a test set of N examples/cases classified into C classes with the following specifications:
+      </p>
+            
+      <form class="form-upload text-center mb-5"
+            action="#"
+            method="POST"
+            enctype="multipart/form-data">
+        <p>
+          <div class="text-left informative">
+            <ol >
+                <h5><li>Ground Truth Labels</li></h5>
+                <ul>
+                    <!-- <li><strong>File:</strong> y_true_array.txt</li> -->
+                    <li><strong>Format:</strong> <code>.txt</code> Nx1 array</li>
+                    <li>
+                        <strong>Requirements:</strong> 
+                        <ul>
+                            <li>True class labels for each example</li>
+                            <li>Sequential integers starting from 0</li>
+                            <li>NumPy float/integer format</li>
+                        </ul>
+                    </li>
+                    <li><strong>Example file:</strong> <a href="{{ url_for('static', filename='testfiles/y_true_vit_pathmnist.txt') }}"
+    target="_blank">Example1</a>, <a href="{{ url_for('static', filename='testfiles/y_true_vit_pathmnist_int.txt') }}"
+    target="_blank">Example2</a></li>
+                </ul>
+                <h5><li>Probability File</li></h5>
+                <ul>
+                    <!-- <li><strong>File:</strong> y_proba_array.txt</li> -->
+                    <li><strong>Format:</strong> <code>.txt</code> NxC array</li>
+                    <li>
+                        <strong>Requirements:</strong> 
+                        <ul>
+                            <li>Rows represent examples</li>
+                            <li>Columns represent classes</li>
+                            <li>Contains model's probability predictions</li>
+                            <li>Values must sum to ~1.0 per row</li>
+                            <li>Values must be separated by blanks</li>
+                        </ul>
+                    </li>
+                    <li><strong>Example file:</strong> <a href="{{ url_for('static', filename='testfiles/y_proba_vit_pathmnist.txt') }}"
+                  target="_blank">Example</a></li>
+                </ul>
+            </ol>
+            <h4><strong>Optional Input File</strong></h4>
+            <ol start="3">
+                <h5><li>Predicted Classes</li></h5>
+                <ul>
+                    <!-- <li><strong>File:</strong> y_pred_array.txt</li> -->
+                    <li><strong>Format:</strong> <code>.txt</code> Nx1 array</li>
+                    <li><strong>Requirements:</strong> contains the predicted class for each example</li>
+                    <li><strong>Notes:</strong> If this file is not provided, the predicted class will be determined by selecting the class with the highest probability from the Probability File array using the <code>np.argmax</code> function.</li>
+                </ul>
+            </ol>
+            
+            <h4><strong>Optional Parameter</strong></h4>
+            <h5>Number of bins</h5>
+            <ul>
+                <li><strong>Purpose:</strong> Specify the number of equal-length intervals to partition the probability space</li>
+                <li><strong>Implementation:</strong> this value is input as the bins parameter for the numpy.histogram_bin_edges function</li>
+                <li><i><strong>Default:</strong></i> Automatically determined via monotonic sweep</li>
+            </ul>
+            <h4><strong>Note</strong></h4>
+            <ul>
+                <li>If you are using Python, please export numpy arrays to text files using the command <code>np.savetxt('filename.txt', X)</code>.</li>
+                <li>To generate a proper CSV file from an existing MS Excel file, try this tool: <a href="https://www.entechne.com/metimeter/convertitoreXLSX.html">XLSX-CSV converter</a>.</li>
+            </ul>
+    
+          </p>
+            <p class="text-right font-italic mt-5" id="upload">Fields marked with * are mandatory.</p>
+            <p class="text-right font-italic">Files must not contain missing values.</p>
+        </div>
+        <!-- <h1 class="h4 mb-3 font-weight-normal">Please select or drag and drop the input files</h1> -->
+      </br>
+        <dt class="text-left">Ground Truth Labels *</dt>
+        <div class="custom-file">
+            <input type="file"
+                class="custom-file-input"
+                id="y_true"
+                name="y_true"
+                accept=".txt"
+                required
+                onchange="updateFileName(this, 'truthLabel')">
+            <label class="custom-file-label text-left" id="truthLabel" for="y_true" data-default-text="Select or drop here a .txt y_true_array file *">Select or drop here a .txt y_true_array file *</label>
+        </div>
+      <br>
+      <br>
+        <dt class="text-left">Probability File *</dt>
+        <div class="custom-file">
+        <input type="file"
+               class="custom-file-input"
+               id="y_proba"
+               name="y_proba"
+               accept=".txt"
+               required
+               onchange="updateFileName(this, 'probaLabel')">
+        <label class="custom-file-label text-left" id="probaLabel" for="y_proba" data-default-text="Select or drop here a .txt y_probability_array file *">Select or drop here a .txt y_probability_array file *</label>
+      </div>
+      <br>
+      <br>
+        <dt class="text-left">Predicted Classes</dt>
+        <div class="custom-file">
+            <input type="file" class="custom-file-input" id="y_pred" name="y_pred"
+                accept=".txt" onchange="updateFileName(this, 'predLabel')">
+            <label class="custom-file-label text-left" id="predLabel" for="y_pred" data-default-text="Select or drop here a .txt y_predicted_array file">Select or drop here a .txt y_predicted_array file</label>
+        </div>
+      <br>
+      <br>
+        <div class="input-group">
+          <!-- <div class="input-group-prepend">
+            <span class="input-group-text">Number of bins</span>
+          </div> -->
+          <div class="flex">
+            <dt class="text-left">Number of bins</dt>
+            <select class="form-control" id="strategy" name="strategy">
+                <option value="Automatic" selected>Automatic</option>
+                {% for n in range(1,21) %}
+                <option value="{{ n }}">{{ n }}</option>
+                {% endfor %}
+            </select>
+          </div>
+        </div>
+      <br>
+      <br>
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          {% for msg in messages
+            %}
+            <div class="alert alert-warning" role="alert">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <!-- <button class="btn btn-lg btn-primary btn-block"
+              type="submit"
+              name="submit"
+              value="submit">
+          <span id="calcBtn">Generate results</span>
+      </button> -->
+      <button id="calibrationBtn" class="btn btn-lg btn-primary btn-block" type="submit"
+              name="submit"
+              value="submit">
+        <span id="calcBtn">Generate results</span>
+        <div id="progressBar" class="progress mt-2" style="display: none; height: 5px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+        </div>
+      </button>
+
+    </form>
+    <br>
+    {% include 'footer.html' %}
+  </div>
+  <script>document.querySelectorAll('.custom-file-input').forEach(input => input.addEventListener('change', function (e) {
+      var fileName = e.target.files[0].name;
+      var nextSibling = e.target.nextElementSibling
+      nextSibling.innerText = fileName
+    }))
+  </script>
+  <script>
+    // $('.form-upload').submit(function () {
+    //   $(':button[type=submit]').html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Calculating...').addClass('disabled');
+    // });
+
+    $('#testBtn').click(function () {
+      $('#testBtn').html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Calculating test results...').addClass('disabled');
+      strategy = $("#strategy").val()
+      window.location.href = "{{ url_for("test") }}?strategy="+strategy
+    });
+
+
+  </script>
+  <script>
+    $(document).ready(function() {
+    $('.form-upload').submit(function(e) {
+      // e.preventDefault();
+      const form = this;
+      const btn = $('#calibrationBtn');
+      const btnText = $('#calcBtn');
+      const progressBar = $('#progressBar');
+      
+      // 1. Validazione form
+      if (!form.checkValidity()) {
+        form.reportValidity();
+        return false;
+      }
+      
+      // 2. Prepara UI
+      // btn.prop('disabled', true)
+      //   .css('--progress-width', '0%');
+
+      btnText.html('<span class="spinner-border spinner-border-sm mr-2"></span> Processing');
+      
+      // 3. Animazione progresso
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+          
+          // 4. Completamento
+          setTimeout(() => {
+            btnText.text('Calculation Complete!');
+            
+            // 5. Reset dopo 2 secondi o submit
+            setTimeout(() => {
+              form.submit(); // Sostituisci con AJAX se necessario
+            }, 2000);
+          }, 300);
+        }
+        
+        // Aggiorna progresso
+        progressBar.css('width', `${progress}%`);
+        btn.css('--progress-width', `${progress}%`);
+        
+      }, 1000);
+    });
+  });
+  </script>
+  <script>
+    // Funzione per aggiornare i label
+    function updateFileName(input, labelId) {
+      const labelElement = document.getElementById(labelId);
+      
+      if (input.files && input.files.length > 0) {
+        // File was selected - show filename
+        labelElement.textContent = input.files[0].name;
+      } else {
+        // No file selected - reset to default text
+        labelElement.textContent = labelElement.getAttribute('data-default-text') || 
+                                'Select or drop here a .txt file';
+      }
+    }
+  </script>
+  {% include 'metatool.html' %}
+</body>
+</html>
+<!-- f1c840d -->

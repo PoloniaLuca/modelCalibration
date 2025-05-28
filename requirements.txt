@@ -1,0 +1,6 @@
+Flask==3.0.2
+matplotlib  # Last version with wide binary availability
+numpy
+pandas
+scikit-learn>=0.24.1 
+# calibrationframework @ git+https://github.com/lorenzofamiglini/CalFram@main
